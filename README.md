@@ -5,9 +5,9 @@ There seem to be a handful of attempts at making daemonizing easy in PHP. This i
 
 To create a daemon, you'll need to include this library as a composer dependency in your project, then create at least 2 files.
 
-The first is the actual entry point -- the equivalent of an `index.php` file in the web world. That will handle all your commandline arguments, etc., which you can do however you wish (though I would recommend [commando](https://github.com/nategood/commando)). You'll also need to create an object implementing at least \KS\MessageDaemonConfigInterface here to pass into the constructor of your daemon. It should all look something like this:
+The first is the actual entry point -- the equivalent of an `index.php` file in the web world. That will handle all your commandline arguments, etc., which you can do however you wish (though I would recommend [commando](https://github.com/nategood/commando)). You'll also need to create an object implementing at least `\KS\MessageDaemonConfigInterface` here to pass into the constructor of your daemon. It should all look something like this:
 
-```
+```php
 <?php
 namespace KS;
 
