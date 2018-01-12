@@ -75,7 +75,7 @@ abstract class AbstractMessageDaemon
                             $shuttingDown = true;
                             $this->preDisconnect();
                             break;
-                        } catch (MessageException $e) {
+                        } catch (UserMessageException $e) {
                             $jsonapi = [
                                 'errors' => [
                                     [
