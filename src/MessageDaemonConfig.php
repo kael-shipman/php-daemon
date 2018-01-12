@@ -1,7 +1,7 @@
 <?php
 namespace KS;
 
-class MessageDaemonConfig extends \KS\BaseConfig implements ConfigInterface
+class MessageDaemonConfig extends \KS\BaseConfig implements MessageDaemonConfigInterface
 {
     public function getErrorReporting() : int
     {

@@ -32,7 +32,7 @@ try {
         $configFile = realpath($cmd['c']);
     }
 
-    $config = new Config("$root/src/config.php", $configFile);
+    $config = new MessageDaemonConfig("$root/src/config.php", $configFile);
     $exchange = new Exchange($config);
     $exchange->run();
 
