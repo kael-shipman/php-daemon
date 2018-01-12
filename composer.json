@@ -1,7 +1,9 @@
 {
-    "name" : "A sample exchange daemon",
+    "name" : "kael-shipman/php-daemon",
+    "description": "A set of small, abstract daemon classes and peripherals",
+    "type": "library",
+    "license": "MIT",
     "require" : {
-        "nategood/commando": "~0.2.9",
         "kael-shipman/php-std-traits": "^3.2.4"
     },
     "autoload": {
