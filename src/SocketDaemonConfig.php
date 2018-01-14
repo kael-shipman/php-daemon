@@ -1,16 +1,8 @@
 <?php
 namespace KS;
 
-class MessageDaemonConfig extends \KS\BaseConfig implements MessageDaemonConfigInterface
+class SocketDaemonConfig extends \KS\BaseConfig implements SocketDaemonConfigInterface
 {
-    public function getErrorReporting() : int
-    {
-        return $this->get('error-reporting');
-    }
-    public function getDisplayErrors() : int
-    {
-        return $this->get('display-errors');
-    }
     public function getSocketDomain() : int
     {
         return $this->get('socket-domain');
@@ -30,10 +22,6 @@ class MessageDaemonConfig extends \KS\BaseConfig implements MessageDaemonConfigI
     public function getSocketPort() : ?string
     {
         return $this->get('socket-port');
-    }
-    public function getVerbosity() : int
-    {
-        return $this->get('verbosity');
     }
 }
 

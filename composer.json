@@ -4,6 +4,7 @@
     "type": "library",
     "license": "MIT",
     "require" : {
+        "ext-sockets": "*",
         "kael-shipman/php-std-traits": "^3.2.4"
     },
     "autoload": {
