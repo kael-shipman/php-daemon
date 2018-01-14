@@ -15,6 +15,10 @@ class DaemonConfig extends \KS\BaseConfig implements DaemonConfigInterface
     {
         return $this->get('verbosity');
     }
+    public function getLogLevel() : string
+    {
+        return $this->get('log-level');
+    }
 }
 
 

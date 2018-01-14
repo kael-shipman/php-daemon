@@ -13,14 +13,14 @@ declare(ticks = 1);
 
 abstract class AbstractDaemon
 {
-    protected $cnf;
+    protected $config;
     private $children = [];
 
-    public function __construct(DaemonConfigInterface $cnf)
+    public function __construct(DaemonConfigInterface $config)
     {
-        $this->cnf = $cnf;
-        error_reporting($this->cnf->getErrorReporting());
-        ini_set('display_errors', (int)$this->cnf->getDisplayErrors());
+        $this->config = $config;
+        error_reporting($this->config->getPhpErrorLevel());
+        ini_set('display_errors', (int)$this->config->getPhpDisplayErrors());
         set_time_limit(0);
     }
 
@@ -38,7 +38,7 @@ abstract class AbstractDaemon
         if ($signo === SIGTERM) {
             $this->shutdown();
         } elseif ($signo === SIGHUP) {
-            $this->cnf->reload();
+            $this->config->reload();
         }
     }
 
@@ -53,7 +53,7 @@ abstract class AbstractDaemon
             if (is_string($d)) {
                 $this->log($str, $d[0], $verbosity);
             } elseif (gettype($d) === 'resource') {
-                if ($this->cnf->getVerbosity() >= $verbosity) {
+                if ($this->config->getVerbosity() >= $verbosity) {
                     $this->fork(function() use ($d, $str) {
                         fwrite($d, $str);
                     });
@@ -80,7 +80,7 @@ abstract class AbstractDaemon
         return $this->children;
     }
 
-    abstract protected function shutdown();
+    abstract public function shutdown();
 }
 
 

@@ -10,30 +10,26 @@ namespace KS;
  * * Should accept an optional config file
  */
 
-abstract class AbstractMessageDaemon
+abstract class AbstractSocketDaemon extends AbstractDaemon
 {
-    protected $cnf;
     private $sock;
     private $cnx;
-
-    public function __construct(\KS\BaseConfig $cnf)
-    {
-        $this->cnf = $cnf;
-        error_reporting($this->cnf->getErrorReporting());
-        ini_set('display_errors', (int)$this->cnf->getDisplayErrors());
-        set_time_limit(0);
-    }
+    private $initialized = false;
 
     public function run()
     {
+        if (!$this->initialized) {
+            $this->init();
+            $this->initialized = true;
+        }
         $this->preRun();
         try {
             // Set up the socket
-            if (($this->sock = \socket_create($this->cnf->getSocketDomain(), $this->cnf->getSocketType(), $this->cnf->getSocketProtocol())) === false) {
+            if (($this->sock = \socket_create($this->config->getSocketDomain(), $this->config->getSocketType(), $this->config->getSocketProtocol())) === false) {
                 throw new \RuntimeException("Couldn't establish a socket connection: ".\socket_strerror(\socket_last_error()));
             }
-            if (\socket_bind($this->sock, $this->cnf->getSocketAddress(), $this->cnf->getSocketPort()) === false) {
-                throw new \RuntimeException("Couldn't bind to socket at {$this->cnf->getSocketAddress()} ({$this->cnf->getSocketPort()}): " . \socket_strerror(\socket_last_error($this->sock)));
+            if (\socket_bind($this->sock, $this->config->getSocketAddress(), $this->config->getSocketPort()) === false) {
+                throw new \RuntimeException("Couldn't bind to socket at {$this->config->getSocketAddress()} ({$this->config->getSocketPort()}): " . \socket_strerror(\socket_last_error($this->sock)));
             }
             if (\socket_listen($this->sock, 5) === false) {
                 throw new \RuntimeException("Failed to listen on socket: ".\socket_strerror(\socket_last_error($this->sock)));
@@ -107,6 +103,11 @@ abstract class AbstractMessageDaemon
         }
     }
 
+    protected function init()
+    {
+        // To be overridden
+    }
+
     abstract protected function processMessage(string $msg) : ?string;
 
     protected function write(string $msg) : void
@@ -114,10 +115,18 @@ abstract class AbstractMessageDaemon
         \socket_write($this->cnx, $msg, strlen($msg));
     }
 
-    protected function say(string $str, int $verbosity = 1, $resource = STDOUT)
+    public function shutdown()
     {
-        if ($this->cnf->getVerbosity() >= $verbosity) {
-            fwrite($resource, $str);
+        $this->say("\nShutting down");
+        if ($this->cnx) {
+            \socket_close($this->cnx);
+        }
+        if ($this->sock) {
+            \socket_close($this->sock);
+        }
+        if ($this->config->getSocketDomain() === AF_UNIX && file_exists($this->config->getSocketAddress())) {
+            $this->say("\nCleaning up Unix Socket", 2);
+            unlink($this->config->getSocketAddress());
         }
     }
 
@@ -134,8 +143,8 @@ abstract class AbstractMessageDaemon
 
     protected function onListen()
     {
-        $msg = "\nListening on {$this->cnf->getSocketAddress()}";
-        if ($p = $this->cnf->getSocketPort()) {
+        $msg = "\nListening on {$this->config->getSocketAddress()}";
+        if ($p = $this->config->getSocketPort()) {
             $msg .= ":$p";
         }
         fwrite(STDOUT, $msg);
@@ -178,21 +187,6 @@ abstract class AbstractMessageDaemon
     protected function preShutdown()
     {
         $this->say("\nPreparing to shutdown.", 3);
-    }
-
-    protected function shutdown()
-    {
-        $this->say("\nShutting down");
-        if ($this->cnx) {
-            \socket_close($this->cnx);
-        }
-        if ($this->sock) {
-            \socket_close($this->sock);
-        }
-        if ($this->cnf->getSocketDomain() === AF_UNIX && file_exists($this->cnf->getSocketAddress())) {
-            $this->say("\nCleaning up Unix Socket", 2);
-            unlink($this->cnf->getSocketAddress());
-        }
     }
 
     protected function postShutdown()

@@ -1,7 +1,7 @@
 <?php
 namespace KS;
 
-class SocketDaemonConfig extends \KS\BaseConfig implements SocketDaemonConfigInterface
+class SocketDaemonConfig extends DaemonConfig implements SocketDaemonConfigInterface
 {
     public function getSocketDomain() : int
     {
