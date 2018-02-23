@@ -44,7 +44,8 @@ abstract class AbstractDaemon
      */
     protected function handleSignal(int $signo, $siginfo) : void
     {
-        if ($signo === SIGTERM) {
+        $this->log("Signal received: $signo", LOG_INFO, ["syslog", STDOUT]);
+        if ($signo === SIGTERM || $signo === SIGINT || $signo === SIGQUIT) {
             $this->shutdown();
         } elseif ($signo === SIGHUP) {
             $this->config->reload();
@@ -53,7 +54,8 @@ abstract class AbstractDaemon
 
     protected function setUpSignalHandling()
     {
-        foreach ([SIGTERM, SIGHUP, SIGUSR1, SIG_ERR, SIGINT, SIGQUIT, SIGSTOP, SIGKILL ] as $sig) {
+        foreach ([SIGTERM, SIGHUP, SIGUSR1, SIGINT, SIGQUIT] as $sig) {
+            $this->log("Registering signal $sig", LOG_DEBUG);
             pcntl_signal($sig, [ $this, 'handleSignal' ]);
         }
     }
@@ -75,20 +77,20 @@ abstract class AbstractDaemon
      */
     protected function log(string $str, int $verbosity = 3, $destinations = null) : void
     {
-        if ($this->config->getVerbosity() < $verbosity) {
+        if ($this->config->getLogLevel() < $verbosity) {
             return;
         }
 
         if (!$destinations) {
-            $destinations = ["general"];
+            $destinations = ["syslog"];
         }
         if (!is_array($destinations)) {
             $destinations = [$destinations];
         }
         foreach($destinations as $d) {
-            // If destination is string, consider it a log entry
-            if (is_string($d)) {
-                syslog($verbosity, "$d: $str");
+            // If destination is syslog, use that
+            if ($d === 'syslog') {
+                syslog($verbosity, "$str");
 
             // If resource, write directly to it
             } elseif (gettype($d) === 'resource') {
