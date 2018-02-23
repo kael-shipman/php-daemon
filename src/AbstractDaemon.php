@@ -14,14 +14,23 @@ declare(ticks = 1);
 abstract class AbstractDaemon
 {
     protected $config;
+    protected $logIdentifier;
     private $children = [];
 
     public function __construct(DaemonConfigInterface $config)
     {
         $this->config = $config;
+        $this->logIdentifier = $this->config->getLogIdentifier();
         error_reporting($this->config->getPhpErrorLevel());
         ini_set('display_errors', (int)$this->config->getPhpDisplayErrors());
         set_time_limit(0);
+        openlog($this->logIdentifier, LOG_PID | LOG_PERROR, LOG_DAEMON);
+        $this->setUpSignalHandling();
+    }
+
+    public function __destruct()
+    {
+        closelog();
     }
 
     /**
@@ -42,37 +51,62 @@ abstract class AbstractDaemon
         }
     }
 
+    protected function setUpSignalHandling()
+    {
+        foreach ([SIGTERM, SIGHUP, SIGUSR1, SIG_ERR, SIGINT, SIGQUIT, SIGSTOP, SIGKILL ] as $sig) {
+            pcntl_signal($sig, [ $this, 'handleSignal' ]);
+        }
+    }
+
     abstract public function run();
 
-    protected function say(string $str, int $verbosity = 1, $destinations = []) : void
+    /**
+     * Outputs text to one or more destinations, if the configured verbosity permits.
+     * Note that `$verbosity` corresponds to php's LOG_* constants (http://php.net/manual/en/network.constants.php)
+     *
+     * @param string $str The string to output
+     * @param int $verbosity The minimum level at which this should be output (lower is "quieter")
+     * @param mixed $destinations One or more destinations to write to, according to the following rules:
+     * 
+     *   * If string, writes to log with string as message prefix
+     *   * If resource, writes to resource (via fork)
+     *
+     * @return void
+     */
+    protected function log(string $str, int $verbosity = 3, $destinations = null) : void
     {
+        if ($this->config->getVerbosity() < $verbosity) {
+            return;
+        }
+
+        if (!$destinations) {
+            $destinations = ["general"];
+        }
         if (!is_array($destinations)) {
             $destinations = [$destinations];
         }
         foreach($destinations as $d) {
+            // If destination is string, consider it a log entry
             if (is_string($d)) {
-                $this->log($str, $d[0], $verbosity);
+                syslog($verbosity, "$d: $str");
+
+            // If resource, write directly to it
             } elseif (gettype($d) === 'resource') {
-                if ($this->config->getVerbosity() >= $verbosity) {
-                    $this->fork(function() use ($d, $str) {
-                        fwrite($d, $str);
-                    });
-                }
+                $this->thread(function() use ($d, $str) {
+                    fwrite($d, $str);
+                });
+
+            // Otherwise, don't know how to handle it.
             } else {
                 new \RuntimeException("Don't know how to handle destinations of type ".gettype($d)." for text output.");
             }
         }
     }
 
-    protected function log(string $str, string $logname, int $level)
-    {
-        // Use syslog
-    }
-
-    protected function fork(\Closure $p)
+    protected function thread(\Closure $p)
     {
         // TODO: Implememt forking
-        $p();
+        return $p();
     }
 
     protected function getChildren()

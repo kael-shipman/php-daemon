@@ -11,13 +11,13 @@ class DaemonConfig extends \KS\BaseConfig implements DaemonConfigInterface
     {
         return $this->get('php-display-errors');
     }
-    public function getVerbosity() : int
-    {
-        return $this->get('verbosity');
-    }
-    public function getLogLevel() : string
+    public function getLogLevel() : int
     {
         return $this->get('log-level');
+    }
+    public function getLogIdentifier() : string
+    {
+        return $this->get('log-identifier');
     }
 }
 
