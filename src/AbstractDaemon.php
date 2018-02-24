@@ -73,11 +73,13 @@ abstract class AbstractDaemon
      *   * If string, writes to log with string as message prefix
      *   * If resource, writes to resource (via fork)
      *
+     * @param boolean $force Force a write, regardless of verbosity. (This is mainly to make sure certain text
+     * gets into syslog.)
      * @return void
      */
-    protected function log(string $str, int $verbosity = 3, $destinations = null) : void
+    protected function log(string $str, int $verbosity = 3, $destinations = null, $force = false) : void
     {
-        if ($this->config->getLogLevel() < $verbosity) {
+        if ($this->config->getLogLevel() < $verbosity && !$force) {
             return;
         }
 
