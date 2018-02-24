@@ -84,12 +84,17 @@ abstract class AbstractDaemon
         foreach($destinations as $d) {
             // If destination is syslog, use that
             if ($d === 'syslog') {
-                syslog($verbosity, "$str");
+                $level = ["EMERGENCY", "ALERT", "CRITICAL", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG"][$verbosity];
+                $level = "[$level]";
+                while (strlen($level) < 11) {
+                    $level .= " ";
+                }
+                syslog($verbosity, "$level $str");
 
             // If resource, write directly to it
             } elseif (gettype($d) === 'resource') {
                 $this->thread(function() use ($d, $str) {
-                    fwrite($d, $str);
+                    fwrite($d, "$str\n");
                 });
 
             // Otherwise, don't know how to handle it.
