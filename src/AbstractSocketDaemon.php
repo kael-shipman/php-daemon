@@ -1,14 +1,7 @@
 <?php
 namespace KS;
+declare(ticks = 1);
 
-/**
- * * Should daemonize, i.e., not return until killed
- * * Should output useful info to stdout
- * * Should output errors to stderr
- * * Should fork logging processes
- * * Should accept command line arguments
- * * Should accept an optional config file
- */
 
 abstract class AbstractSocketDaemon extends AbstractDaemon
 {
@@ -54,7 +47,7 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
                     $chunk = trim($chunk, "\n\r");
                     $buffer .= $chunk;
 
-                    // If we've received a return, time to process
+                    // If we've received a line break, time to process
                     if ($origLen > strlen($chunk)) {
                         try {
                             $this->preProcessMessage($buffer);
@@ -64,14 +57,14 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
                                 $this->write($response);
                             }
                             $this->postSendResponse();
-                        } catch (ConnectionCloseException $e) {
+                        } catch (Exception\ConnectionClose $e) {
                             $this->preDisconnect();
                             break;
-                        } catch (ShutdownException $e) {
+                        } catch (Exception\Shutdown $e) {
                             $shuttingDown = true;
                             $this->preDisconnect();
                             break;
-                        } catch (UserMessageException $e) {
+                        } catch (Exception\UserMessage $e) {
                             $jsonapi = [
                                 'errors' => [
                                     [
@@ -117,7 +110,7 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
 
     public function shutdown()
     {
-        $this->say("\nShutting down");
+        $this->log("Shutting down", LOG_INFO, null, true);
         if ($this->cnx) {
             \socket_close($this->cnx);
         }
@@ -125,7 +118,7 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
             \socket_close($this->sock);
         }
         if ($this->config->getSocketDomain() === AF_UNIX && file_exists($this->config->getSocketAddress())) {
-            $this->say("\nCleaning up Unix Socket", 2);
+            $this->log("Cleaning up Unix Socket", LOG_INFO);
             unlink($this->config->getSocketAddress());
         }
     }
@@ -138,60 +131,59 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
 
     protected function preRun()
     {
-        $this->say("\nStarting up...");
+        $this->log("Starting up...", LOG_INFO);
     }
 
     protected function onListen()
     {
-        $msg = "\nListening on {$this->config->getSocketAddress()}";
+        $msg = "Listening on {$this->config->getSocketAddress()}";
         if ($p = $this->config->getSocketPort()) {
             $msg .= ":$p";
         }
-        fwrite(STDOUT, $msg);
+        $this->log($msg, LOG_INFO);
     }
 
     protected function onConnect()
     {
-        $this->say("\nConnected to peer", 2);
+        $this->log("Connected to peer", LOG_DEBUG);
     }
 
     protected function preProcessMessage(string $msg)
     {
-        $this->say("\nGot a message!!", 3);
+        $this->log("Got a message: $msg", LOG_DEBUG);
     }
 
     protected function preSendResponse($msg)
     {
-        $this->say("\nGot a response!!!", 3);
         if (is_array($msg)) {
             $msg = json_encode($msg);
         }
-        $this->say(" Message: $msg", 4);
+        $this->log("Got a response: $msg", LOG_DEBUG);
     }
 
     protected function postSendResponse()
     {
-        $this->say("\nResponse sent.", 3);
+        $this->log("Response sent.", LOG_DEBUG);
     }
 
     protected function preDisconnect()
     {
-        $this->say("\nDisconnecting from peer", 3);
+        $this->log("Disconnecting from peer", LOG_DEBUG);
     }
 
     protected function postDisconnect()
     {
-        $this->say("\nDisconnected. Waiting.", 2);
+        $this->log("Disconnected. Waiting.", LOG_DEBUG);
     }
 
     protected function preShutdown()
     {
-        $this->say("\nPreparing to shutdown.", 3);
+        $this->log("Preparing to shutdown.", LOG_DEBUG);
     }
 
     protected function postShutdown()
     {
-        $this->say("\n\nGoodbye.\n");
+        $this->log("Goodbye.", LOG_DEBUG);
     }
 }
 

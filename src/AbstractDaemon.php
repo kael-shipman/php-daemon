@@ -2,14 +2,6 @@
 namespace KS;
 declare(ticks = 1);
 
-/**
- * * Should daemonize, i.e., not return until killed
- * * Should output useful info to stdout
- * * Should output errors to stderr
- * * Should fork logging processes
- * * Should accept command line arguments
- * * Should accept an optional config file
- */
 
 abstract class AbstractDaemon
 {
@@ -24,7 +16,7 @@ abstract class AbstractDaemon
         error_reporting($this->config->getPhpErrorLevel());
         ini_set('display_errors', (int)$this->config->getPhpDisplayErrors());
         set_time_limit(0);
-        openlog($this->logIdentifier, LOG_PID | LOG_PERROR, LOG_DAEMON);
+        openlog($this->logIdentifier, LOG_PID, LOG_DAEMON);
         $this->setUpSignalHandling();
     }
 
@@ -109,7 +101,7 @@ abstract class AbstractDaemon
 
     protected function thread(\Closure $p)
     {
-        // TODO: Implememt forking
+        // TODO: Implement threading
         return $p();
     }
 
