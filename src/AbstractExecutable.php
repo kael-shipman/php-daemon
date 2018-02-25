@@ -3,18 +3,16 @@ namespace KS;
 declare(ticks = 1);
 
 
-abstract class AbstractDaemon
+abstract class AbstractExecutable
 {
     protected $config;
     protected $logIdentifier;
-    private $children = [];
+    private $activeThreads = [];
 
-    public function __construct(DaemonConfigInterface $config)
+    public function __construct(ExecutableConfigInterface $config)
     {
         $this->config = $config;
         $this->logIdentifier = $this->config->getLogIdentifier();
-        error_reporting($this->config->getPhpErrorLevel());
-        ini_set('display_errors', (int)$this->config->getPhpDisplayErrors());
         set_time_limit(0);
         openlog($this->logIdentifier, LOG_PID, LOG_DAEMON);
         $this->setUpSignalHandling();
@@ -36,7 +34,7 @@ abstract class AbstractDaemon
      */
     protected function handleSignal(int $signo, $siginfo) : void
     {
-        $this->log("Signal received: $signo", LOG_INFO, ["syslog", STDOUT]);
+        $this->log("Signal received: $signo", LOG_DEBUG, ["syslog", STDOUT]);
         if ($signo === SIGTERM || $signo === SIGINT || $signo === SIGQUIT) {
             $this->shutdown();
         } elseif ($signo === SIGHUP) {
@@ -51,8 +49,6 @@ abstract class AbstractDaemon
             pcntl_signal($sig, [ $this, 'handleSignal' ]);
         }
     }
-
-    abstract public function run();
 
     /**
      * Outputs text to one or more destinations, if the configured verbosity permits.
@@ -110,12 +106,10 @@ abstract class AbstractDaemon
         return $p();
     }
 
-    protected function getChildren()
+    protected function getActiveThreads()
     {
-        return $this->children;
+        return $this->activeThreads;
     }
-
-    abstract public function shutdown();
 }
 
 

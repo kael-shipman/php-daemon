@@ -1,11 +1,13 @@
 {
-    "name" : "kael-shipman/php-daemon",
-    "description": "A set of small, abstract daemon classes and peripherals",
+    "name" : "kael-shipman/php-executables",
+    "description": "A set of small, abstract executable classes and peripherals",
     "type": "library",
     "license": "MIT",
     "require" : {
-        "ext-sockets": "*",
-        "kael-shipman/php-std-traits": "^4.0.0"
+        "ext-sockets": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^6.0.0"
     },
     "autoload": {
         "psr-4": {
