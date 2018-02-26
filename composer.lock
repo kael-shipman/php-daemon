@@ -4,8 +4,56 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "95998b3dbe92589038f2740cbdf6c289",
-    "packages": [],
+    "content-hash": "036615af6376e17800d3855a85d5c1c8",
+    "packages": [
+        {
+            "name": "kael-shipman/php-std-traits",
+            "version": "v5.0.x-dev",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/kael-shipman/php-std-traits.git",
+                "reference": "0d1d6b50ad2dce0b68264dde28c65d2e92b858fd"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/kael-shipman/php-std-traits/zipball/0d1d6b50ad2dce0b68264dde28c65d2e92b858fd",
+                "reference": "0d1d6b50ad2dce0b68264dde28c65d2e92b858fd",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.5"
+            },
+            "require-dev": {
+                "phpunit/phpunit": ">=4.8"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "KS\\": "src/"
+                },
+                "files": [
+                    "src/Exceptions.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Kael Shipman",
+                    "email": "kael.shipman@gmail.com",
+                    "homepage": "https://colors.kaelshipman.me",
+                    "role": "Developer"
+                }
+            ],
+            "description": "An assortment of traits, exceptions and minor classes that help to implement standard PHP interfaces like ArrayAccess, Iterator, etc., as well as a few other useful features.",
+            "keywords": [
+                "traits"
+            ],
+            "time": "2018-02-25T23:14:59+00:00"
+        }
+    ],
     "packages-dev": [
         {
             "name": "doctrine/instantiator",
@@ -1467,7 +1515,9 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {
+        "kael-shipman/php-std-traits": 20
+    },
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {

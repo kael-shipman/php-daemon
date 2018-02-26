@@ -106,9 +106,15 @@ abstract class AbstractExecutable
         return $p();
     }
 
-    protected function getActiveThreads()
+    protected function getActiveThreads(): array
     {
         return $this->activeThreads;
+    }
+
+    public function shutdown(): void
+    {
+        $this->log("Shutting down.", LOG_INFO, [ "syslog", STDOUT ], true);
+        throw new Exception\Shutdown("Shutdown requested");
     }
 }
 

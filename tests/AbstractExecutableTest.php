@@ -3,9 +3,12 @@ namespace KS;
 
 class AbstractExecutableTest extends \PHPUnit\Framework\TestCase
 {
+    protected $app;
+    protected $config;
+
     public function setUp()
     {
-        $this->config = new Test\ExecutableConfig();
+        $this->config = new ExecutableConfig(__DIR__.'/test-config.json');
         $this->app = new Test\Executable($this->config);
     }
 
