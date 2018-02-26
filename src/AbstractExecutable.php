@@ -34,8 +34,9 @@ abstract class AbstractExecutable
      */
     protected function handleSignal(int $signo, $siginfo) : void
     {
-        $this->log("Signal received: $signo", LOG_DEBUG, ["syslog", STDOUT]);
+        $this->log("Signal received: $signo", LOG_DEBUG, "syslog");
         if ($signo === SIGTERM || $signo === SIGINT || $signo === SIGQUIT) {
+            $this->log("Termination signal received. Shutting down.", LOG_INFO, [ "syslog", STDOUT ], true);
             $this->shutdown();
         } elseif ($signo === SIGHUP) {
             $this->config->reload();
@@ -113,7 +114,6 @@ abstract class AbstractExecutable
 
     public function shutdown(): void
     {
-        $this->log("Shutting down.", LOG_INFO, [ "syslog", STDOUT ], true);
         throw new Exception\Shutdown("Shutdown requested");
     }
 }
