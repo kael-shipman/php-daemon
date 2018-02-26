@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "036615af6376e17800d3855a85d5c1c8",
+    "content-hash": "9825e517e177df3cf5a263ea0f63d323",
     "packages": [
         {
             "name": "kael-shipman/php-std-traits",
-            "version": "v5.0.x-dev",
+            "version": "v5.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/kael-shipman/php-std-traits.git",
-                "reference": "0d1d6b50ad2dce0b68264dde28c65d2e92b858fd"
+                "reference": "96c073ffca9a35f6a0c8793989fd20eec349831b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/kael-shipman/php-std-traits/zipball/0d1d6b50ad2dce0b68264dde28c65d2e92b858fd",
-                "reference": "0d1d6b50ad2dce0b68264dde28c65d2e92b858fd",
+                "url": "https://api.github.com/repos/kael-shipman/php-std-traits/zipball/96c073ffca9a35f6a0c8793989fd20eec349831b",
+                "reference": "96c073ffca9a35f6a0c8793989fd20eec349831b",
                 "shasum": ""
             },
             "require": {
@@ -51,7 +51,7 @@
             "keywords": [
                 "traits"
             ],
-            "time": "2018-02-25T23:14:59+00:00"
+            "time": "2018-02-26T00:58:01+00:00"
         }
     ],
     "packages-dev": [
@@ -1515,9 +1515,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "kael-shipman/php-std-traits": 20
-    },
+    "stability-flags": [],
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {

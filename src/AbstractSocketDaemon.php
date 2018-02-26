@@ -13,9 +13,9 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
     {
         if (!$this->initialized) {
             $this->init();
-            $this->initialized = true;
         }
         $this->preRun();
+        $this->log("Begin listing on socket...", LOG_INFO, [ "syslog", STDOUT ], true);
         try {
             // Set up the socket
             if (($this->sock = \socket_create($this->config->getSocketDomain(), $this->config->getSocketType(), $this->config->getSocketProtocol())) === false) {
@@ -96,9 +96,15 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
         }
     }
 
+    /**
+     * To be overridden by child classes
+     *
+     * Child implementations should always call parent to complete initialization
+     */
     protected function init()
     {
-        // To be overridden
+        $this->initialized = true;
+        $this->log("Daemon Initialized", LOG_INFO, [ "syslog", STDOUT ], true);
     }
 
     abstract protected function processMessage(string $msg) : ?string;
@@ -110,7 +116,7 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
 
     public function shutdown()
     {
-        $this->log("Shutting down", LOG_INFO, null, true);
+        $this->log("Shutting down", LOG_INFO, [ "syslog", STDOUT ], true);
         if ($this->cnx) {
             \socket_close($this->cnx);
         }
@@ -131,7 +137,7 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
 
     protected function preRun()
     {
-        $this->log("Starting up...", LOG_INFO);
+        // Override
     }
 
     protected function onListen()
