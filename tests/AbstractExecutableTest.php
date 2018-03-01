@@ -8,7 +8,7 @@ class AbstractExecutableTest extends \PHPUnit\Framework\TestCase
 
     public function setUp()
     {
-        $this->config = new ExecutableConfig(__DIR__.'/test-config.json');
+        $this->config = new ExecutableConfig([__DIR__.'/test-config.json']);
         $this->app = new Test\Executable($this->config);
     }
 
