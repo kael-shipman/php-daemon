@@ -3,11 +3,13 @@ namespace KS;
 declare(ticks = 1);
 
 
-abstract class AbstractSocketDaemon extends AbstractDaemon
+abstract class AbstractSocketDaemon extends AbstractExecutable
 {
     private $sock;
     private $cnx;
     private $initialized = false;
+
+    protected $readMode = PHP_BINARY_READ;
 
     public function run()
     {
@@ -39,12 +41,12 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
                 $this->onConnect();
                 $buffer = '';
                 do {
-                    if (false === ($chunk = \socket_read($this->cnx, 2048, PHP_NORMAL_READ))) {
+                    if (false === ($chunk = \socket_read($this->cnx, 2048, $this->readMode))) {
                         throw new \RuntimeException("Socket read from peer failed: ".\socket_strerror(\socket_last_error($this->sock)));
                     }
 
                     $origLen = strlen($chunk);
-                    $chunk = trim($chunk, "\n\r");
+                    $chunk = trim($chunk, $this->readMode === PHP_BINARY_READ? "\0" : "\n\r");
                     $buffer .= $chunk;
 
                     // If we've received a line break, time to process
@@ -56,7 +58,7 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
                             if ($response) {
                                 $this->write($response);
                             }
-                            $this->postSendResponse();
+                            $this->postSendResponse($response);
                         } catch (Exception\ConnectionClose $e) {
                             $this->preDisconnect();
                             break;
@@ -74,10 +76,9 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
                                     ]
                                 ]
                             ];
-                            $this->preSendResponse($jsonapi);
-                            $jsonapi = json_encode($jsonapi);
-                            $this->write($jsonapi);
-                            $this->postSendResponse();
+                            $jsonapi = $this->preSendResponse($jsonapi);
+                            $this->write(json_encode($jsonapi));
+                            $this->postSendResponse($jsonapi);
                         }
                         $buffer = '';
                     }
@@ -167,7 +168,7 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
         $this->log("Got a response: $msg", LOG_DEBUG);
     }
 
-    protected function postSendResponse()
+    protected function postSendResponse(array $response)
     {
         $this->log("Response sent.", LOG_DEBUG);
     }
