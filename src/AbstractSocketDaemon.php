@@ -45,12 +45,19 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
                         throw new \RuntimeException("Socket read from peer failed: ".\socket_strerror(\socket_last_error($this->sock)));
                     }
 
+                    // $origLen === 0 means the peer has left
                     $origLen = strlen($chunk);
+                    if ($origLen === 0) {
+                        break;
+                    }
+
                     $chunk = trim($chunk, $this->readMode === PHP_BINARY_READ? "\0" : "\n\r");
                     $buffer .= $chunk;
+                    $this->log("Received a chunk of length $origLen and added to buffer.", LOG_DEBUG);
 
                     // If we've received a line break, time to process
                     if ($origLen > strlen($chunk)) {
+                        $this->log("Message terminator found. Processing message", LOG_DEBUG);
                         try {
                             $this->preProcessMessage($buffer);
                             $response = $this->processMessage($buffer);
@@ -81,6 +88,7 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
                             $this->postSendResponse($jsonapi);
                         }
                         $buffer = '';
+                        $this->log("Buffer reset. Looping back to read.", LOG_DEBUG);
                     }
                 } while (true);
                 \socket_close($this->cnx);
@@ -115,7 +123,7 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
         \socket_write($this->cnx, $msg, strlen($msg));
     }
 
-    public function shutdown()
+    public function shutdown(): void
     {
         $this->log("Shutting down", LOG_INFO, [ "syslog", STDOUT ], true);
         if ($this->cnx) {
@@ -168,7 +176,11 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
         $this->log("Got a response: $msg", LOG_DEBUG);
     }
 
-    protected function postSendResponse(array $response)
+    /**
+     * @param string|array $response
+     * @return void
+     */
+    protected function postSendResponse($response)
     {
         $this->log("Response sent.", LOG_DEBUG);
     }
