@@ -1,29 +1,19 @@
 <?php
 namespace KS;
 
-include 'BaseSocket.php';
-
 class BufferedSocket extends BaseSocket
 {
     private $buffer="";
-
-    public const SUCCEEDED=1;
-    public const FAILED=0;
-
-    public function __construct($socket)
-    {
-        parent::__construct($socket);
-    }
 
     public function processReadReady()
     {
         $data = parent::readData();
         if ($data === false)
-            return FAILED;
+            return Result::FAILED;
         if (\strlen($data)===0)
             $this->socket = 0; // Socket is closed
         $this->buffer .= $data;
-        return SUCCEEDED;
+        return Result::SUCCEEDED;
     }
 
     public function getReadBuffer()
