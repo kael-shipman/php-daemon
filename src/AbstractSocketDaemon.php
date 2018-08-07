@@ -14,13 +14,13 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
         $this->log("Begin listening on socket...", LOG_INFO, [ "syslog", STDOUT ], true);
         try {
             // Set up the socket
-            if (($this->listeningSocket = BaseSocket::newSocket($this->config->getSocketDomain(), $this->config->getSocketType(), $this->config->getSocketProtocol())) === false) {
-                throw new \RuntimeException("Couldn't create a listening socket: ".\socket_strerror(\socket_last_error()));
+            if (($this->listeningSocket = UnixSocket::newSocket($this->config->getSocketAddress(), $this->config->getSocketType(), $this->config->getSocketProtocol())) === false) {
+                throw new \RuntimeException("Couldn't create a listening socket: '".BaseSocket::getLastGlobalErrorStr()."'");
             }
             if ($this->listeningSocket->setBlocking(false) === Result::FAILED) {
-                throw new \RuntimeException("Couldn't make listening socket non-blocking: ".\socket_strerror(\socket_last_error()));
+                throw new \RuntimeException("Couldn't make listening socket non-blocking: '".BaseSocket::getLastGlobalStr()."'");
             }
-            if ($this->listeningSocket->bind($this->config->getSocketAddress(), $this->config->getSocketPort()) === Result::FAILED) {
+            if ($this->listeningSocket->bind() === Result::FAILED) {
                 throw new \RuntimeException("Couldn't bind to socket at {$this->config->getSocketAddress()} ({$this->config->getSocketPort()}): " . $this->listeningSocket->getLastErrorStr());
             }
             if ($this->listeningSocket->listen(5) === Result::FAILED) {
@@ -49,12 +49,12 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
                 // Process socket events
                 foreach ($socketsReady as $socket) {
                     if ($socket === $this->listeningSocket) { 
-                        $acceptedSocket = $socket->accept();
+                        $acceptedSocket = new BufferedSoccket($socket->accept()->getSocketForMove());
                         if ($acceptedSocket === false) {
                             throw new \RuntimeException("Error attempting to accept connection: '".$accepted->getLastErrorStr()."'");
                         }
                         
-                        $socketLoop->watch(new BufferedSocket($acceptedSocket));
+                        $socketLoop->watch($acceptedSocket);
                         $this->onConnect($acceptedSocket);
                         // Create buffer for connection
                         continue;

@@ -10,9 +10,9 @@ class SelectSocketLoop
 
     public function watchForRead($socketObject)
     {
-        $rawSocket = $this->getRawSocket($socket);
+        $rawSocket = $this->getRawSocket($socketObject);
         \array_push($this->watchedSockets, $rawSocket);
-        $this->watchedSocketObjects[$rawSocket] = $socketObject;
+        $this->watchedSocketObjects[$this->getSocketKey($rawSocket)] = $socketObject;
     }
 
     public function unwatchForRead($socketObject)
@@ -21,20 +21,30 @@ class SelectSocketLoop
         if (($key = array_search($rawSocket, $this->watchedSockets)) !== false) {
             unset($this->watchedSockets[$key]);
         }
-        unset($this->watchedSocketObjects[$rawSocket]);
+        unset($this->watchedSocketObjects[$this->getSocketKey($rawSocket)]);
+    }
+
+    public function getReadWatchCount()
+    {
+        return \count($this->watchedSockets);
     }
 
     private function getRawSocket($socket)
     {
-        if (\is_subclass_of($socket, "BaseSocket")) {
+        if (\is_a($socket, "\\KS\\BaseSocket")) {
             return $socket->getRawSocket();
         }
         return $socket;
     }
 
-    private function waitForEvents($timeDuration)
+    private function getSocketKey($socket)
     {
-        $watchedReadSockets = $this->$watchedSockets;
+        return \intval($socket);
+    }
+
+    public function waitForEvents($timeDuration)
+    {
+        $watchedReadSockets = $this->watchedSockets;
         $watchedWriteSockets = NULL;
         $watchedExceptionSockets = NULL;
 
@@ -44,8 +54,8 @@ class SelectSocketLoop
             return Result::FAILED;
         }
         $result = Array();
-        foreach ($watchReadSockets as $rawSocket) {
-            \array_push($result, $this->watchedSocketObjects[$rawSocket]);
+        foreach ($watchedReadSockets as $rawSocket) {
+            \array_push($result, $this->watchedSocketObjects[$this->getSocketKey($rawSocket)]);
         }
         return $result;
     }

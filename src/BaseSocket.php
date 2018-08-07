@@ -3,16 +3,22 @@ namespace KS;
 
 class BaseSocket
 {
-    protected $socket=0;
+    protected $socket=-1;
 
     public static function newRawSocket($socketDomain, $socketType, $socketProtocol)
     {
         return \socket_create($socketDomain, $socketType, $socketProtocol);
     }
-
     public static function newSocket($socketDomain, $socketType, $socketProtocol)
     {
         return new BaseSocket(newRawSocket($socketDomain, $socketType, $socketProtocol));
+    }
+
+    public function getSocketForMove()
+    {
+        $socket = $this->socket;
+        $this->socket = -1;
+        return $socket;
     }
 
     public static function getLastGlobalErrorStr()
@@ -22,7 +28,7 @@ class BaseSocket
 
     public function __construct($socket)
     {
-        if (\is_subclass_of($socket, "BaseSocket")) {
+        if (\is_a($socket, "\\KS\\BaseSocket")) {
             $socket = $socket->getRawSocket();
         }
         $this->socket = $socket;
@@ -30,7 +36,7 @@ class BaseSocket
 
     public function __destruct()
     {
-        $this->closeSocket();
+        $this->close();
     }
 
     public function setBlocking($shouldBlock)
@@ -47,41 +53,21 @@ class BaseSocket
 
     public function getRawSocket()
     {
-        return $socket;
+        return $this->socket;
     }
 
     public function isSocketValid()
     {
-        return $socket != 0;
+        return $this->socket != -1;
     }
 
-    public function closeSocket()
+    public function close()
     {
         if (!$this->isSocketValid()) {
             return;
         }
         \socket_close($this->socket);
-    }
-
-    public function bind($address, $port)
-    {
-        if (\socket_set_nonblock($this->socket) === true) {
-            return Result::SUCCEEDED;
-        }
-        return Result::FAILED;
-    }
-
-    public function accept()
-    {
-        return new BaseSocket(\socket_accept($this->$socket));
-    }
-
-    public function listen($maxConnectionAttempts=5)
-    {
-        if (\socket_listen($this->socket, $maxConnectionAttempts) === true) {
-            return Result::SUCCEEDED;
-        }
-        return Result::FAILED;
+        $this->socket = -1;
     }
 
     public function writeData($data)
@@ -91,11 +77,25 @@ class BaseSocket
 
     public function readData()
     {
-        return \socket_read($this->socket, 2048, PHP_NORMAL_READ);
+        return \socket_read($this->socket, 65*1024, PHP_BINARY_READ);
+    }
+
+    public function writeBaseMsg($msg, $address, $port)
+    {
+        return \socket_sendto($this->socket, $msg, 0, $address, $port);
+    }
+    
+    public function readBaseMsg($address)
+    {
+        $buffer = "";
+        $port = null;
+        $result = \socket_recvfrom($this->socket, $buffer, 64*1024, 0, $address, $port);
+        return $buffer;
     }
 
     public function getLastErrorStr()
     {
         return \socket_strerror(\socket_last_error($this->socket));
+        
     }
 }

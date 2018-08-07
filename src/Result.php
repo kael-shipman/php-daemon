@@ -1,4 +1,5 @@
 <?php
+namespace KS;
 
 class Result
 {
