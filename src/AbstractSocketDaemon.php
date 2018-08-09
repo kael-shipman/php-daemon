@@ -2,10 +2,12 @@
 namespace KS;
 declare(ticks = 1);
 
-abstract class AbstractSocketDaemon extends AbstractDaemon
+abstract class AbstractSocketDaemon extends AbstractExecutable
 {
     private $listeningSocket;
     private $initialized = false;
+
+    protected $readMode = PHP_BINARY_READ;
 
     public function run()
     {
@@ -87,7 +89,7 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
                         if ($response) {
                             $bufferedSocket->write($response);
                         }
-                        $this->postSendResponse($socket);
+                        $this->postSendResponse($socket, $response);
                     } catch (Exception\ConnectionClose $e) {
                         $this->preDisconnect($socket);
                         $this->postDisconnect($socket);
@@ -142,7 +144,7 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
 
     abstract protected function processMessage(string $msg) : ?string;
 
-    public function shutdown()
+    public function shutdown(): void
     {
         $this->log("Shutting down", LOG_INFO, [ "syslog", STDOUT ], true);
         if ($this->config->getSocketDomain() === AF_UNIX && file_exists($this->config->getSocketAddress())) {
@@ -187,7 +189,11 @@ abstract class AbstractSocketDaemon extends AbstractDaemon
         $this->log("Got a response: $msg", LOG_DEBUG);
     }
 
-    protected function postSendResponse($socket)
+    /**
+     * @param string|array $response
+     * @return void
+     */
+    protected function postSendResponse($socket, $response)
     {
         $this->log("Response sent.", LOG_DEBUG);
     }

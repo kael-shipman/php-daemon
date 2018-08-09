@@ -1,7 +1,7 @@
 <?php
 namespace KS;
 
-interface SocketDaemonConfigInterface extends ExecutableConfigInterface
+interface SocketDaemonConfigInterface
 {
     public function getSocketDomain() : int;
     public function getSocketType() : int;
