@@ -4,18 +4,25 @@ namespace KS;
 class BufferedSocket extends BaseSocket
 {
     private $buffer="";
+    private $socketClosed=false;
 
     public function processReadReady()
     {
         $data = parent::readData();
         if ($data === false) {
+            $socketClosed = true;
             return Result::FAILED;
         }
         if (\strlen($data)===0) {
-            $this->invalidateSocket();
+            $this->socketClosed = true;
         }
         $this->buffer .= $data;
         return Result::SUCCEEDED;
+    }
+
+    public function isSocketClosed()
+    {
+        return $this->socketClosed;
     }
 
     public function getReadBuffer()

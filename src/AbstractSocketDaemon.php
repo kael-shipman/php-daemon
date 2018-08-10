@@ -11,7 +11,7 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
     {
         $this->init();
         $this->preRun();
-        $this->log("Begin listening on socket...", LOG_INFO, [ "syslog", STDOUT ], true);
+        $this->log("Begin listening on socket at '".$this->config->getSocketAddress()."'...", LOG_INFO, [ "syslog", STDOUT ], true);
         try {
             // Set up the socket
             if (($this->listeningSocket = UnixSocket::newUnixSocket($this->config->getSocketAddress(), $this->config->getSocketType(), $this->config->getSocketProtocol())) === false) {
@@ -61,23 +61,23 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
                     }
 
                     // Anything in here is a buffered socket
-
                     if ($socket->processReadReady() === Result::FAILED) {
                         throw new \RuntimeException("Error reading socket: '".$socket->getLastErrorStr()."'");
                     }
-                    if (!$socket->isSocketValid()) {
+                    if ($socket->isSocketClosed()) {
                         // Socket has closed
                         $socketLoop->unwatchForRead($socket);
+                        $socket->close();
                         continue;
                     }
                     $buffer = $socket->getReadBuffer();
+
                     $termPos = \strpos($buffer, "\0");
                     if ($termPos === false) {
                         continue; // Message not ready
                     }
                     $buffer = \substr($buffer, 0, $termPos+1);
-                    $socket->consumeReadBuffer(\strlen($buffer));
-                    $buffer = trim($buffer, "\r\n");
+                    $socket->consumeReadBuffer($termPos+1);
 
                     // Process message
                     try {
