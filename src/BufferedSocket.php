@@ -8,10 +8,12 @@ class BufferedSocket extends BaseSocket
     public function processReadReady()
     {
         $data = parent::readData();
-        if ($data === false)
+        if ($data === false) {
             return Result::FAILED;
-        if (\strlen($data)===0)
-            $this->socket = 0; // Socket is closed
+        }
+        if (\strlen($data)===0) {
+            $this->invalidateSocket();
+        }
         $this->buffer .= $data;
         return Result::SUCCEEDED;
     }

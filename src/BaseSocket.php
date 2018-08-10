@@ -17,7 +17,7 @@ class BaseSocket
     public function getSocketForMove()
     {
         $socket = $this->socket;
-        $this->socket = -1;
+        $this->invalidateSocket();
         return $socket;
     }
 
@@ -67,7 +67,7 @@ class BaseSocket
             return;
         }
         \socket_close($this->socket);
-        $this->socket = -1;
+        $this->invalidateSocket();
     }
 
     public function writeData($data)
@@ -97,5 +97,10 @@ class BaseSocket
     {
         return \socket_strerror(\socket_last_error($this->socket));
         
+    }
+
+    protected function invalidateSocket() : void
+    {
+        $this->socket = -1;
     }
 }

@@ -7,8 +7,6 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
     private $listeningSocket;
     private $initialized = false;
 
-    protected $readMode = PHP_BINARY_READ;
-
     public function run()
     {
         $this->init();
@@ -16,7 +14,7 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
         $this->log("Begin listening on socket...", LOG_INFO, [ "syslog", STDOUT ], true);
         try {
             // Set up the socket
-            if (($this->listeningSocket = UnixSocket::newSocket($this->config->getSocketAddress(), $this->config->getSocketType(), $this->config->getSocketProtocol())) === false) {
+            if (($this->listeningSocket = UnixSocket::newUnixSocket($this->config->getSocketAddress(), $this->config->getSocketType(), $this->config->getSocketProtocol())) === false) {
                 throw new \RuntimeException("Couldn't create a listening socket: '".BaseSocket::getLastGlobalErrorStr()."'");
             }
             if ($this->listeningSocket->setBlocking(false) === Result::FAILED) {
@@ -34,7 +32,7 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
             $socketLoop = new SelectSocketLoop();
             $timeout = new TimeDuration(TimeDuration::SECONDS, 1);
 
-            $socketLoop->watch($this->listeningSocket);
+            $socketLoop->watchForRead($this->listeningSocket);
 
             // Establish communication loop
             $shuttingDown = false;
@@ -51,12 +49,12 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
                 // Process socket events
                 foreach ($socketsReady as $socket) {
                     if ($socket === $this->listeningSocket) { 
-                        $acceptedSocket = new BufferedSoccket($socket->accept()->getSocketForMove());
+                        $acceptedSocket = new BufferedSocket($socket->accept()->getSocketForMove());
                         if ($acceptedSocket === false) {
                             throw new \RuntimeException("Error attempting to accept connection: '".$accepted->getLastErrorStr()."'");
                         }
                         
-                        $socketLoop->watch($acceptedSocket);
+                        $socketLoop->watchForRead($acceptedSocket);
                         $this->onConnect($acceptedSocket);
                         // Create buffer for connection
                         continue;
@@ -64,21 +62,21 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
 
                     // Anything in here is a buffered socket
 
-                    if ($socket->processReadReady() === BufferedSocket::FAILED) {
-                        throw new \RuntimeException("Error reading s0ocket: '".$bufferedSocket->getLastErrorStr()."'");
+                    if ($socket->processReadReady() === Result::FAILED) {
+                        throw new \RuntimeException("Error reading socket: '".$socket->getLastErrorStr()."'");
                     }
                     if (!$socket->isSocketValid()) {
                         // Socket has closed
-                        $socketLoop->unwatchSocket($socket);
+                        $socketLoop->unwatchForRead($socket);
                         continue;
                     }
-                    $buffer = $bufferedSocket->getReadBuffer();
-                    $newLinePos = \strpos($buffer, "\n");
-                    if ($newLinPos === false) {
+                    $buffer = $socket->getReadBuffer();
+                    $termPos = \strpos($buffer, "\0");
+                    if ($termPos === false) {
                         continue; // Message not ready
                     }
-                    $buffer = \substr($buffer, 0, $newLinePos+1);
-                    $bufferedSocket->consumeReadBuffer(\strlen($buffer));
+                    $buffer = \substr($buffer, 0, $termPos+1);
+                    $socket->consumeReadBuffer(\strlen($buffer));
                     $buffer = trim($buffer, "\r\n");
 
                     // Process message
@@ -87,7 +85,7 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
                         $response = $this->processMessage($socket, $buffer);
                         $this->preSendResponse($socket, $response);
                         if ($response) {
-                            $bufferedSocket->write($response);
+                            $socket->writeData($response);
                         }
                         $this->postSendResponse($socket, $response);
                     } catch (Exception\ConnectionClose $e) {
@@ -142,7 +140,7 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
         $this->log("Daemon Initialized", LOG_INFO, [ "syslog", STDOUT ], true);
     }
 
-    abstract protected function processMessage(string $msg) : ?string;
+    abstract protected function processMessage(BufferedSocket $socket, string $msg) : ?string;
 
     public function shutdown(): void
     {
