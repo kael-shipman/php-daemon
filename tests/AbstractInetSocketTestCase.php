@@ -1,7 +1,7 @@
 <?php
 namespace KS;
 
-abstract class InetSocketTestCase extends SocketTestCase
+abstract class AbstractInetSocketTestCase extends AbstractSocketTestCase
 {
     protected $listeningSocket;
     protected $clientSocket;
@@ -9,8 +9,8 @@ abstract class InetSocketTestCase extends SocketTestCase
 
     protected function setupConnections()
     {
-        $this->listeningSocket = InetSocket::newInetSocket();
-        $this->clientSocket = InetSocket::newInetSocket();
+        $this->listeningSocket = InetSocket::createInetSocket();
+        $this->clientSocket = InetSocket::createInetSocket();
 
         $this->assertSame(Result::SUCCEEDED, $this->listeningSocket->bind("127.0.0.1",0));
         $boundPort = $this->listeningSocket->getPort();

@@ -5,30 +5,30 @@ class UnixSocket extends BaseSocket
 {
     private $filename="";
 
-    public function __construct($socket, $filename)
+    public function __construct($socket, string $filename)
     {
         parent::__construct($socket);
         $this->filename = $filename;
     }
 
-    public static function newUnixSocket($filename, $socketType=\SOCK_STREAM, $socketProtocol=0)
+    public static function createUnixSocket(string $filename, int $socketType=\SOCK_STREAM, int $socketProtocol=0)
     {
-        return new UnixSocket(parent::newRawSocket(\AF_UNIX, $socketType, $socketProtocol), $filename);
+        return new UnixSocket(parent::createRawSocket(\AF_UNIX, $socketType, $socketProtocol), $filename);
     }
 
-    public function getFilename()
+    public function getFilename() : string
     {
         return $this->filename;
     }
 
-    public function connect()
+    public function connect() : int
     {
         $result = \socket_connect($this->socket, $this->filename, 0);
 
-        return $result?Result::SUCCEEDED:Result::FAILED;
+        return $result ? Result::SUCCEEDED : Result::FAILED;
     }
 
-    public function bind()
+    public function bind() : int
     {
         if (\socket_bind($this->socket, $this->filename) === true) {
             return Result::SUCCEEDED;
@@ -36,12 +36,12 @@ class UnixSocket extends BaseSocket
         return Result::FAILED;
     }
 
-    public function accept()
+    public function accept() : BaseSocket
     {
         return new BaseSocket(\socket_accept($this->socket));
     }
 
-    public function listen($maxConnectionAttempts=5)
+    public function listen(int $maxConnectionAttempts=5)
     {
         if (\socket_listen($this->socket, $maxConnectionAttempts) === true) {
             return Result::SUCCEEDED;
@@ -49,12 +49,12 @@ class UnixSocket extends BaseSocket
         return Result::FAILED;
     }
 
-    public function writeMsg($msg)
+    public function writeMsg(string $msg)
     {
         return parent::writeBaseMsg($msg, $this->filename, null);
     }
     
-    public function readMsg($msg)
+    public function readMsg() : string
     {
         $buffer = "";
         $port = null;

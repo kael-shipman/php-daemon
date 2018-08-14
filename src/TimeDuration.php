@@ -14,109 +14,109 @@ class TimeDuration
     public const DAYS=self::HOURS*24;
     public const WEEKS=self::DAYS*7;
 
-    public function __construct($type=self::NANOS, $duration=0)
+    public function __construct(int $type=self::NANOS, int $duration=0)
     {
         $this->setDuration($type, $duration);
     }
 
-    public function hasDuration()
+    public function hasDuration() : bool
     {
         return $this->durationNano>0; // There is actually an amount of time in here besides 0.
     }
 
-    public function copy()
+    public function copy() : TimeDuration
     {
         return new TimeDuration(self::NANOS, $this->durationNano);
     }
 
-    public function getDuration($type)
+    public function getDuration($type) : int
     {
         return \intdiv($this->durationNano,$type);
     }
 
-    public function setDuration($type, $duration)
+    public function setDuration(int $type, int $duration) : void
     {
         $this->durationNano = $duration*$type;
     }
 
-    public function getNanos()
+    public function getNanos() : int
     {
         return $this->getDuration(self::NANOS);
     }
     
-    public function setNanos($duration)
+    public function setNanos(int $duration)
     {
         $this->setDuration(self::NANOS, $duration);
     }
 
-    public function getMicros()
+    public function getMicros() : int
     {
         return $this->getDuration(self::MICROS);
     }
     
-    public function setMicros($duration)
+    public function setMicros(int $duration)
     {
         $this->setDuration(self::MICROS, $duration);
     }
 
-    public function getMillis()
+    public function getMillis() : int
     {
         return $this->getDuration(self::MILLIS);
     }
     
-    public function setMillis($duration)
+    public function setMillis(int $duration)
     {
         $this->setDuration(self::MILLIS, $duration);
     }
 
-    public function getSeconds()
+    public function getSeconds() : int
     {
         return $this->getDuration(self::SECONDS);
     }
     
-    public function setSeconds($duration)
+    public function setSeconds(int $duration)
     {
         $this->setDuration(self::SECONDS, $duration);
     }
 
-    public function getMinutes()
+    public function getMinutes() : int
     {
         return $this->getDuration(self::MINUTES);
     }
     
-    public function setMinutes($duration)
+    public function setMinutes(int $duration)
     {
         $this->setDuration(self::MINUTES, $duration);
     }
 
-    public function getHours()
+    public function getHours() : int
     {
         return $this->getDuration(self::HOURS);
     }
     
-    public function setHours($duration)
+    public function setHours(int $duration)
     {
         $this->setDuration(self::HOURS, $duration);
     }
 
-    public function getDays()
+    public function getDays() : int
     {
         return $this->getDuration(self::DAYS);
     }
     
-    public function setDays($duration)
+    public function setDays(int $duration)
     {
         $this->setDuration(self::DAYS, $duration);
     }
 
-    public function getWeeks()
+    public function getWeeks() : int
     {
         return $this->getDuration(self::WEEKS);
     }
 
-    public function setWeeks()
+    public function setWeeks(int $duration)
     {
-        $this->setDuration(self::WEEKS);
+        $this->setDuration(self::WEEKS, $duration);
     }
     
 };

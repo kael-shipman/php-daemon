@@ -8,36 +8,36 @@ class SelectSocketLoop
 
     // Currently only supports watching read events
 
-    public function watchForRead($socketObject)
+    public function watchForRead($socketObject) : void
     {
         $rawSocket = $this->getRawSocket($socketObject);
         \array_push($this->watchedSockets, $rawSocket);
-        $this->watchedSocketObjects[$this->getSocketKey($rawSocket)] = $socketObject;
+        $this->watchedSocketObjects[$this->getRawSocketKey($rawSocket)] = $socketObject;
     }
 
-    public function unwatchForRead($socketObject)
+    public function unwatchForRead($socketObject) : void
     {
         $rawSocket = $this->getRawSocket($socketObject);
         if (($key = array_search($rawSocket, $this->watchedSockets)) !== false) {
             unset($this->watchedSockets[$key]);
         }
-        unset($this->watchedSocketObjects[$this->getSocketKey($rawSocket)]);
+        unset($this->watchedSocketObjects[$this->getRawSocketKey($rawSocket)]);
     }
 
-    public function getReadWatchCount()
+    public function getReadWatchCount() : int
     {
         return \count($this->watchedSockets);
     }
 
     private function getRawSocket($socket)
     {
-        if (\is_a($socket, "\\KS\\BaseSocket")) {
+        if (BaseSocket::isBaseSocket($socket)) {
             return $socket->getRawSocket();
         }
         return $socket;
     }
 
-    private function getSocketKey($socket)
+    private function getRawSocketKey($socket) : int
     {
         return \intval($socket);
     }
@@ -55,7 +55,7 @@ class SelectSocketLoop
         }
         $result = Array();
         foreach ($watchedReadSockets as $rawSocket) {
-            \array_push($result, $this->watchedSocketObjects[$this->getSocketKey($rawSocket)]);
+            \array_push($result, $this->watchedSocketObjects[$this->getRawSocketKey($rawSocket)]);
         }
         return $result;
     }

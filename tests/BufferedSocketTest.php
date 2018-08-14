@@ -1,7 +1,7 @@
 <?php
 namespace KS;
 
-class BufferedSocketTests extends InetSocketTestCase
+class BufferedSocketTests extends AbstractInetSocketTestCase
 {
     public function testBuffering()
     {
@@ -27,11 +27,11 @@ class BufferedSocketTests extends InetSocketTestCase
 
         //Process buffer
         $this->assertSame($data.$data.$data, $bufferedSocket->getReadBuffer());
-        $bufferedSocket->consumeReadBuffer(\strlen($data)-1);
+        $bufferedSocket->reduceReadBuffer(\strlen($data)-1);
 
         $this->assertSame("F".$data.$data, $bufferedSocket->getReadBuffer());
 
-        $readData = $bufferedSocket->getAndConsumeReadBuffer(2);
+        $readData = $bufferedSocket->consumeReadBuffer(2);
         $this->assertSame("FA", $readData);
 
         $this->assertSame("BCDEF".$data, $bufferedSocket->getReadBuffer());

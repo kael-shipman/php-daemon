@@ -1,13 +1,13 @@
 <?php
 namespace KS;
 
-class SelectSocketLoopTest extends InetSocketTestCase
+class SelectSocketLoopTest extends AbstractInetSocketTestCase
 {
     public function testEventReady()
     {
         $loop = new SelectSocketLoop();
 
-        $listeningSocket = InetSocket::newInetSocket();
+        $listeningSocket = InetSocket::createInetSocket();
         $listeningSocket->setBlocking(false);
         
         $listeningSocket->bind("127.0.0.1", 0);
@@ -24,7 +24,7 @@ class SelectSocketLoopTest extends InetSocketTestCase
         $readyList = $loop->waitForEvents($noDelay);
         $this->assertSame(0, count($readyList));
 
-        $clientSocket = InetSocket::newInetSocket();
+        $clientSocket = InetSocket::createInetSocket();
         $clientSocket->setBlocking(false);
 
         $clientSocket->connect("127.0.0.1:".$port);

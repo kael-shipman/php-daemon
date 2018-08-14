@@ -1,7 +1,7 @@
 <?php
 namespace KS;
 
-class UnixSocketTest extends SocketTestCase
+class UnixSocketTest extends AbstractSocketTestCase
 {
     private $filename="";
 
@@ -19,11 +19,11 @@ class UnixSocketTest extends SocketTestCase
 
     public function testCommunication()
     {
-        $listeningSocket = UnixSocket::newUnixSocket($this->filename);
+        $listeningSocket = UnixSocket::createUnixSocket($this->filename);
         $this->assertNotFalse($listeningSocket->getRawSocket());
         $listeningSocket->setBlocking(false);
 
-        $clientSocket = UnixSocket::newUnixSocket($this->filename);
+        $clientSocket = UnixSocket::createUnixSocket($this->filename);
         $this->assertNotFalse($clientSocket->getRawSocket());
         $clientSocket->setBlocking(false);
 

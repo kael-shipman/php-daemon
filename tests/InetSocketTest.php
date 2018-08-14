@@ -1,7 +1,7 @@
 <?php
 namespace KS;
 
-class InetSocketTest extends InetSocketTestCase
+class InetSocketTest extends AbstractInetSocketTestCase
 {
 
     public function testCommunication()

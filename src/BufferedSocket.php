@@ -6,7 +6,7 @@ class BufferedSocket extends BaseSocket
     private $buffer="";
     private $socketClosed=false;
 
-    public function processReadReady()
+    public function processReadReady() : int
     {
         $data = parent::readData();
         if ($data === false) {
@@ -20,39 +20,39 @@ class BufferedSocket extends BaseSocket
         return Result::SUCCEEDED;
     }
 
-    public function isSocketClosed()
+    public function isSocketClosed() : bool
     {
         return $this->socketClosed;
     }
 
-    public function getReadBuffer()
+    public function getReadBuffer() : string
     {
         return $this->buffer;
     }
 
-    public function consumeReadBuffer($bytesToConsume)
+    public function reduceReadBuffer(int $bytesToReduce) : void
     {
-        $this->buffer = \substr($this->buffer, $bytesToConsume);
+        $this->buffer = \substr($this->buffer, $bytesToReduce);
     }
 
     // This is a convenience method for when you know the exact size of the message
-    public function getAndConsumeReadBuffer($bytes)
+    public function consumeReadBuffer(int $bytes) : string
     {
         if ($this->getBufferLength()<$bytes) {
             throw new \RuntimeException("BufferedSocket::getAndConsumeReadBuffer requested more bytes than are currently available. Requested=".$bytes.", available=".$this->getBufferLength().".");
         }
         $data = \substr($this->getReadBuffer(), 0, $bytes);
-        $this->consumeReadBuffer($bytes);
+        $this->reduceReadBuffer($bytes);
         return $data;
     }
 
-    public function getBufferLength()
+    public function getBufferLength() : int
     {
         return \strlen($this->buffer);
     }
 
-    public function clear()
+    public function clear() : void
     {
-        $this->consumeReadBuffer($this->getBufferLength());
+        $this->reduceReadBuffer($this->getBufferLength());
     }
 }

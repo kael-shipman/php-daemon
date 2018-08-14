@@ -2,20 +2,39 @@
 namespace KS;
 declare(ticks = 1);
 
-abstract class AbstractSocketDaemon extends AbstractExecutable
+abstract class AbstractSocketDaemon extends AbstractExecutable implements SocketHandlerInterface
 {
     private $listeningSocket;
     private $initialized = false;
 
-    public function run()
+    private function throwCouldntCreateListener(string $details) : void
+    {
+        throw new \RuntimeException("Couldn't create a listening socket: '".BaseSocket::getLastGlobalErrorStr()."', details='".$details."'");
+    }
+
+    public function run() : void
     {
         $this->init();
         $this->preRun();
         $this->log("Begin listening on socket at '".$this->config->getSocketAddress()."'...", LOG_INFO, [ "syslog", STDOUT ], true);
         try {
             // Set up the socket
-            if (($this->listeningSocket = UnixSocket::newUnixSocket($this->config->getSocketAddress(), $this->config->getSocketType(), $this->config->getSocketProtocol())) === false) {
-                throw new \RuntimeException("Couldn't create a listening socket: '".BaseSocket::getLastGlobalErrorStr()."'");
+            switch ($this->config->getSocketDomain()) {
+                case \AF_UNIX:
+                    $this->log("Creating unix socket");
+                    if (($this->listeningSocket = UnixSocket::createUnixSocket($this->config->getSocketAddress(), $this->config->getSocketType(), $this->config->getSocketProtocol())) === false) {
+                        $this->throwCouldntCreateListener("UNIX Socket");
+                    }
+                    break;
+                case \AF_INET:
+                    $this->log("Creating inet socket");
+                    if (($this->listeningSocket = InetSocket::createInetSocket($this->config->getSocketAddress(), $this->config->getSocketType(), $this->config->getSocketProtocol())) === false) {
+                            $this->throwCouldntCreateListener("INET Socket");
+                        }
+                        break;
+                default:
+                    $this->throwCouldntCreateListener("Unknown socket type: '".$this->config->getSocketDomain()."'");
+                    break;
             }
             if ($this->listeningSocket->setBlocking(false) === Result::FAILED) {
                 throw new \RuntimeException("Couldn't make listening socket non-blocking: '".BaseSocket::getLastGlobalStr()."'");
@@ -77,7 +96,7 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
                         continue; // Message not ready
                     }
                     $buffer = \substr($buffer, 0, $termPos+1);
-                    $socket->consumeReadBuffer($termPos+1);
+                    $socket->reduceReadBuffer($termPos+1);
 
                     // Process message
                     try {
@@ -131,7 +150,7 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
      *
      * Child implementations should always call parent to complete initialization
      */
-    protected function init()
+    protected function init() : void
     {
         if ($this->initialized) {
             return;
@@ -140,7 +159,7 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
         $this->log("Daemon Initialized", LOG_INFO, [ "syslog", STDOUT ], true);
     }
 
-    abstract protected function processMessage(BufferedSocket $socket, string $msg) : ?string;
+    abstract protected function processMessage(?BaseSocket $socket, string $msg) : ?string;
 
     public function shutdown(): void
     {
@@ -155,12 +174,12 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
 
     // Hooks
 
-    protected function preRun()
+    public function preRun() : void
     {
         // Override
     }
 
-    protected function onListen()
+    public function onListen() : void
     {
         $msg = "Listening on {$this->config->getSocketAddress()}";
         if ($p = $this->config->getSocketPort()) {
@@ -169,17 +188,17 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
         $this->log($msg, LOG_INFO);
     }
 
-    protected function onConnect($socket)
+    public function onConnect(BaseSocket $socket) : void
     {
         $this->log("Connected to peer", LOG_DEBUG);
     }
 
-    protected function preProcessMessage($socket, string $msg)
+    public function preProcessMessage(BaseSocket $socket, string $msg) : void
     {
         $this->log("Got a message: $msg", LOG_DEBUG);
     }
 
-    protected function preSendResponse($socket, $msg)
+    public function preSendResponse(BaseSocket $socket, $msg) : void
     {
         if (is_array($msg)) {
             $msg = json_encode($msg);
@@ -191,27 +210,27 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
      * @param string|array $response
      * @return void
      */
-    protected function postSendResponse($socket, $response)
+    public function postSendResponse(BaseSocket $socket, string $response) : void
     {
         $this->log("Response sent.", LOG_DEBUG);
     }
 
-    protected function preDisconnect($socket)
+    public function preDisconnect(BaseSocket $socket) : void
     {
         $this->log("Disconnecting from peer", LOG_DEBUG);
     }
 
-    protected function postDisconnect()
+    public function postDisconnect() : void
     {
         $this->log("Disconnected. Waiting.", LOG_DEBUG);
     }
 
-    protected function preShutdown()
+    public function preShutdown() : void
     {
         $this->log("Preparing to shutdown.", LOG_DEBUG);
     }
 
-    protected function postShutdown()
+    public function postShutdown() : void
     {
         $this->log("Goodbye.", LOG_DEBUG);
     }

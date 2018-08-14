@@ -1,7 +1,7 @@
 <?php
 namespace KS;
 
-abstract class SocketTestCase extends \PHPUnit\Framework\TestCase
+abstract class AbstractSocketTestCase extends \PHPUnit\Framework\TestCase
 {
     private function getTimeout($timeout)
     {
