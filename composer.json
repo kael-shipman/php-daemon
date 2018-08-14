@@ -14,6 +14,11 @@
         "psr-4": {
             "KS\\": "src/"
         }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "KS\\": "tests/"
+        }
     }
 }
 

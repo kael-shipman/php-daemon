@@ -2,97 +2,137 @@
 namespace KS;
 declare(ticks = 1);
 
-
-abstract class AbstractSocketDaemon extends AbstractExecutable
+abstract class AbstractSocketDaemon extends AbstractExecutable implements SocketHandlerInterface
 {
-    private $sock;
-    private $cnx;
+    private $listeningSocket;
     private $initialized = false;
 
-    protected $readMode = PHP_BINARY_READ;
-
-    public function run()
+    private function throwCouldntCreateListener(string $details) : void
     {
-        if (!$this->initialized) {
-            $this->init();
-        }
+        throw new \RuntimeException("Couldn't create a listening socket: '".BaseSocket::getLastGlobalErrorStr()."', details='".$details."'");
+    }
+
+    public function run() : void
+    {
+        $this->init();
         $this->preRun();
-        $this->log("Begin listing on socket...", LOG_INFO, [ "syslog", STDOUT ], true);
+        $this->log("Begin listening on socket at '".$this->config->getSocketAddress()."'...", LOG_INFO, [ "syslog", STDOUT ], true);
         try {
             // Set up the socket
-            if (($this->sock = \socket_create($this->config->getSocketDomain(), $this->config->getSocketType(), $this->config->getSocketProtocol())) === false) {
-                throw new \RuntimeException("Couldn't establish a socket connection: ".\socket_strerror(\socket_last_error()));
+            switch ($this->config->getSocketDomain()) {
+                case \AF_UNIX:
+                    $this->log("Creating unix socket");
+                    if (($this->listeningSocket = UnixSocket::createUnixSocket($this->config->getSocketAddress(), $this->config->getSocketType(), $this->config->getSocketProtocol())) === false) {
+                        $this->throwCouldntCreateListener("UNIX Socket");
+                    }
+                    break;
+                case \AF_INET:
+                    $this->log("Creating inet socket");
+                    if (($this->listeningSocket = InetSocket::createInetSocket($this->config->getSocketAddress(), $this->config->getSocketType(), $this->config->getSocketProtocol())) === false) {
+                            $this->throwCouldntCreateListener("INET Socket");
+                        }
+                        break;
+                default:
+                    $this->throwCouldntCreateListener("Unknown socket type: '".$this->config->getSocketDomain()."'");
+                    break;
             }
-            if (\socket_bind($this->sock, $this->config->getSocketAddress(), $this->config->getSocketPort()) === false) {
-                throw new \RuntimeException("Couldn't bind to socket at {$this->config->getSocketAddress()} ({$this->config->getSocketPort()}): " . \socket_strerror(\socket_last_error($this->sock)));
+            if ($this->listeningSocket->setBlocking(false) === Result::FAILED) {
+                throw new \RuntimeException("Couldn't make listening socket non-blocking: '".BaseSocket::getLastGlobalStr()."'");
             }
-            if (\socket_listen($this->sock, 5) === false) {
-                throw new \RuntimeException("Failed to listen on socket: ".\socket_strerror(\socket_last_error($this->sock)));
+            if ($this->listeningSocket->bind() === Result::FAILED) {
+                throw new \RuntimeException("Couldn't bind to socket at {$this->config->getSocketAddress()} ({$this->config->getSocketPort()}): " . $this->listeningSocket->getLastErrorStr());
+            }
+            if ($this->listeningSocket->listen(5) === Result::FAILED) {
+                throw new \RuntimeException("Failed to listen on socket: ".$this->listeningSocket->getLastErrorStr());
             }
 
             $this->onListen();
 
+            $socketLoop = new SelectSocketLoop();
+            $timeout = new TimeDuration(TimeDuration::SECONDS, 1);
+
+            $socketLoop->watchForRead($this->listeningSocket);
+
             // Establish communication loop
             $shuttingDown = false;
             do {
-                if (($this->cnx = \socket_accept($this->sock)) === false) {
-                    throw new \RuntimeException("Error waiting for connections: ".\socket_strerror(\socket_last_error($this->sock)));
+                $socketsReady = $socketLoop->waitForEvents($timeout);
+
+                if ($socketsReady === Result::FAILED) {
+                    throw new \RuntimeException("Error processing socket_select: '".BaseSocket::getLastGlobalErrorStr()."'");
                 }
-                $this->onConnect();
-                $buffer = '';
-                do {
-                    if (false === ($chunk = \socket_read($this->cnx, 2048, $this->readMode))) {
-                        throw new \RuntimeException("Socket read from peer failed: ".\socket_strerror(\socket_last_error($this->sock)));
-                    }
+                if (\count($socketsReady) === 0) {
+                    continue;
+                }
 
-                    // $origLen === 0 means the peer has left
-                    $origLen = strlen($chunk);
-                    if ($origLen === 0) {
-                        break;
-                    }
-
-                    $chunk = trim($chunk, $this->readMode === PHP_BINARY_READ? "\0" : "\n\r");
-                    $buffer .= $chunk;
-                    $this->log("Received a chunk of length $origLen and added to buffer.", LOG_DEBUG);
-
-                    // If we've received a line break, time to process
-                    if ($origLen > strlen($chunk)) {
-                        $this->log("Message terminator found. Processing message", LOG_DEBUG);
-                        try {
-                            $this->preProcessMessage($buffer);
-                            $response = $this->processMessage($buffer);
-                            $this->preSendResponse($response);
-                            if ($response) {
-                                $this->write($response);
-                            }
-                            $this->postSendResponse($response);
-                        } catch (Exception\ConnectionClose $e) {
-                            $this->preDisconnect();
-                            break;
-                        } catch (Exception\Shutdown $e) {
-                            $shuttingDown = true;
-                            $this->preDisconnect();
-                            break;
-                        } catch (Exception\UserMessage $e) {
-                            $jsonapi = [
-                                'errors' => [
-                                    [
-                                        'status' => $e->getCode(),
-                                        'title' => 'Error',
-                                        'detail' => $e->getMessage(),
-                                    ]
-                                ]
-                            ];
-                            $jsonapi = $this->preSendResponse($jsonapi);
-                            $this->write(json_encode($jsonapi));
-                            $this->postSendResponse($jsonapi);
+                // Process socket events
+                foreach ($socketsReady as $socket) {
+                    if ($socket === $this->listeningSocket) { 
+                        $acceptedSocket = new BufferedSocket($socket->accept()->getSocketForMove());
+                        if ($acceptedSocket === false) {
+                            throw new \RuntimeException("Error attempting to accept connection: '".$accepted->getLastErrorStr()."'");
                         }
-                        $buffer = '';
-                        $this->log("Buffer reset. Looping back to read.", LOG_DEBUG);
+                        
+                        $socketLoop->watchForRead($acceptedSocket);
+                        $this->onConnect($acceptedSocket);
+                        // Create buffer for connection
+                        continue;
                     }
-                } while (true);
-                \socket_close($this->cnx);
-                $this->postDisconnect();
+
+                    // Anything in here is a buffered socket
+                    if ($socket->processReadReady() === Result::FAILED) {
+                        throw new \RuntimeException("Error reading socket: '".$socket->getLastErrorStr()."'");
+                    }
+                    if ($socket->isSocketClosed()) {
+                        // Socket has closed
+                        $socketLoop->unwatchForRead($socket);
+                        $socket->close();
+                        continue;
+                    }
+                    $buffer = $socket->getReadBuffer();
+
+                    $termPos = \strpos($buffer, "\0");
+                    if ($termPos === false) {
+                        continue; // Message not ready
+                    }
+                    $buffer = \substr($buffer, 0, $termPos+1);
+                    $socket->reduceReadBuffer($termPos+1);
+
+                    // Process message
+                    try {
+                        $this->preProcessMessage($socket, $buffer);
+                        $response = $this->processMessage($socket, $buffer);
+                        $this->preSendResponse($socket, $response);
+                        if ($response) {
+                            $socket->writeData($response);
+                        }
+                        $this->postSendResponse($socket, $response);
+                    } catch (Exception\ConnectionClose $e) {
+                        $this->preDisconnect($socket);
+                        $this->postDisconnect($socket);
+                        break;
+                    } catch (Exception\Shutdown $e) {
+                        $shuttingDown = true;
+                        $this->preDisconnect($socket);
+                        $this->postDisconnect($socket);
+                        break;
+                    } catch (Exception\UserMessage $e) {
+                        $jsonapi = [
+                            'errors' => [
+                                [
+                                    'status' => $e->getCode(),
+                                    'title' => 'Error',
+                                    'detail' => $e->getMessage(),
+                                ]
+                            ]
+                        ];
+                        $this->preSendResponse($socket, $jsonapi);
+                        $jsonapi = json_encode($jsonapi);
+                        $socket->write($jsonapi);
+                        $this->postSendResponse($socket);
+                    }
+                }
+
             } while (!$shuttingDown);
             $this->preShutdown();
             $this->shutdown();
@@ -110,46 +150,36 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
      *
      * Child implementations should always call parent to complete initialization
      */
-    protected function init()
+    protected function init() : void
     {
+        if ($this->initialized) {
+            return;
+        }
         $this->initialized = true;
         $this->log("Daemon Initialized", LOG_INFO, [ "syslog", STDOUT ], true);
     }
 
-    abstract protected function processMessage(string $msg) : ?string;
-
-    protected function write(string $msg) : void
-    {
-        \socket_write($this->cnx, $msg, strlen($msg));
-    }
+    abstract protected function processMessage(?BaseSocket $socket, string $msg) : ?string;
 
     public function shutdown(): void
     {
         $this->log("Shutting down", LOG_INFO, [ "syslog", STDOUT ], true);
-        if ($this->cnx) {
-            \socket_close($this->cnx);
-        }
-        if ($this->sock) {
-            \socket_close($this->sock);
-        }
         if ($this->config->getSocketDomain() === AF_UNIX && file_exists($this->config->getSocketAddress())) {
             $this->log("Cleaning up Unix Socket", LOG_INFO);
-            unlink($this->config->getSocketAddress());
+            \unlink($this->config->getSocketAddress());
         }
     }
-
-
 
 
 
     // Hooks
 
-    protected function preRun()
+    public function preRun() : void
     {
         // Override
     }
 
-    protected function onListen()
+    public function onListen() : void
     {
         $msg = "Listening on {$this->config->getSocketAddress()}";
         if ($p = $this->config->getSocketPort()) {
@@ -158,17 +188,17 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
         $this->log($msg, LOG_INFO);
     }
 
-    protected function onConnect()
+    public function onConnect(BaseSocket $socket) : void
     {
         $this->log("Connected to peer", LOG_DEBUG);
     }
 
-    protected function preProcessMessage(string $msg)
+    public function preProcessMessage(BaseSocket $socket, string $msg) : void
     {
         $this->log("Got a message: $msg", LOG_DEBUG);
     }
 
-    protected function preSendResponse($msg)
+    public function preSendResponse(BaseSocket $socket, $msg) : void
     {
         if (is_array($msg)) {
             $msg = json_encode($msg);
@@ -180,27 +210,27 @@ abstract class AbstractSocketDaemon extends AbstractExecutable
      * @param string|array $response
      * @return void
      */
-    protected function postSendResponse($response)
+    public function postSendResponse(BaseSocket $socket, string $response) : void
     {
         $this->log("Response sent.", LOG_DEBUG);
     }
 
-    protected function preDisconnect()
+    public function preDisconnect(BaseSocket $socket) : void
     {
         $this->log("Disconnecting from peer", LOG_DEBUG);
     }
 
-    protected function postDisconnect()
+    public function postDisconnect() : void
     {
         $this->log("Disconnected. Waiting.", LOG_DEBUG);
     }
 
-    protected function preShutdown()
+    public function preShutdown() : void
     {
         $this->log("Preparing to shutdown.", LOG_DEBUG);
     }
 
-    protected function postShutdown()
+    public function postShutdown() : void
     {
         $this->log("Goodbye.", LOG_DEBUG);
     }
