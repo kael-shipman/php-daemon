@@ -1,6 +1,12 @@
 PHP Executables
 ==================================================================================
 
+>
+> **ABANDONED**
+>
+> This was sorta fun while it lasted, but there's absolutely no reason to do executables in PHP vs Go or Typescript. If anyone's still interested in this, feel free to take it over, but I've moved on.
+>
+
 There seem to be a handful of attempts at making daemonizing easy in PHP. I haven't looked deeply into these, so I'm not sure I'm really contributing much to the community by adding yet another one, but I have a selfish interest in trying it anyway.
 
 This library contains classes for creating general executables. I define an executable as an application that can be called on the command line, usually with command-line arguments. That application may be a daemon, which runs in the background until it is killed, or it may be a single-run worker application that does a job and exits.
